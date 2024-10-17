@@ -1,6 +1,7 @@
 ﻿using CQRSandMediatorWebApi.Data;
 using CQRSandMediatorWebApi.Features.Items.CreateItem;
 using CQRSandMediatorWebApi.Features.Items.GetItemByID;
+using CQRSandMediatorWebApi.Features.Notification;
 using CQRSandMediatorWebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,13 @@ namespace CQRSandMediatorWebApi.Controllers
         private readonly AppDbContext _context;
         //required for mediatr and cqrs implementation
         private readonly ISender _sender;
-        public ItemsController(AppDbContext context, ISender sender)
+        //required for notification pattern in mediatr
+        private readonly IMediator _mediator;
+        public ItemsController(AppDbContext context, ISender sender, IMediator mediator)
         {
             _context = context;
             _sender = sender;
+            _mediator = mediator;
         }
 
        
@@ -72,6 +76,8 @@ namespace CQRSandMediatorWebApi.Controllers
         public async Task<ActionResult<Item>> AddItemWithMediator(CreateItemCommand createItemCommand)
         {
             var itemId = _sender.Send(createItemCommand);
+            //application of notification pattern of mediatr
+            await _mediator.Publish(new ItemAudit { Message = "Add item triggered!" });
             return Ok(itemId);
         }
 
