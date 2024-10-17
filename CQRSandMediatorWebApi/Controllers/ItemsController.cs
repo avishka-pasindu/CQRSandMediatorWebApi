@@ -1,5 +1,6 @@
 ﻿using CQRSandMediatorWebApi.Data;
 using CQRSandMediatorWebApi.Features.Items.CreateItem;
+using CQRSandMediatorWebApi.Features.Items.GetItemByID;
 using CQRSandMediatorWebApi.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -11,6 +12,7 @@ namespace CQRSandMediatorWebApi.Controllers
     [ApiController]
     public class ItemsController : ControllerBase
     {
+        //after adding mediator pattern, no need to include AppDbContext _context and other related dependencies here, since we've moved them into handler classes
         private readonly AppDbContext _context;
         //required for mediatr and cqrs implementation
         private readonly ISender _sender;
@@ -27,9 +29,10 @@ namespace CQRSandMediatorWebApi.Controllers
             return await _context.Items.ToListAsync();
         }
 
-        
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Item>> GetItem(Guid id)
+        //get itemById API
+        //before cqrs and mediator pattern implementation
+        [HttpGet("without-mediator/{id}")]
+        public async Task<ActionResult<Item>> GetItemWithoutMediator(Guid id)
         {
             var item = await _context.Items.FindAsync(id);
             if (item == null)
@@ -37,6 +40,20 @@ namespace CQRSandMediatorWebApi.Controllers
                 return NotFound();
             }
             return item;
+        }
+
+        //get itemById API
+        //after adding cqrs and mediator pattern implementation
+        [HttpGet("with-mediator/{id}")]
+        public async Task<ActionResult<Item>> GetItemWithMediator(Guid id)
+        {
+            var item= new GetItemByIDQuery(id);
+            var itemResponse = _sender.Send(item);
+            if (itemResponse == null)
+            {
+                return NotFound();
+            }
+            return Ok(itemResponse);
         }
 
         //create item API
